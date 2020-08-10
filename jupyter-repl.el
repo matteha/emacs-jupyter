@@ -828,7 +828,8 @@ lines, truncate it to something less than
       (save-excursion
         (goto-char (jupyter-repl-cell-code-beginning-position))
         (run-hooks 'jupyter-repl-cell-pre-send-hook))
-      (setq code (string-trim (jupyter-repl-cell-code)))
+      ;(setq code (string-trim (jupyter-repl-cell-code)))
+      (setq code (jupyter-repl-cell-code))
       ;; Handle empty code cells as just an update of the prompt number
       (if (= (length code) 0)
           (setq silent t)
