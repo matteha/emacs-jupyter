@@ -105,9 +105,12 @@ The plist values are the message types either sent or received
 from the kernel.")
 
 (defconst jupyter-mime-types '(:application/vnd.jupyter.widget-view+json
-                               :text/html :text/markdown
+                                :text/markdown
                                :image/svg+xml :image/jpeg :image/png
-                               :text/latex :text/plain)
+                               :text/latex
+                               :text/plain
+                               :text/html
+                               )
   "MIME types handled by Jupyter.")
 
 (defconst jupyter-nongraphic-mime-types '(:application/vnd.jupyter.widget-view+json
