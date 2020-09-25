@@ -237,8 +237,7 @@ Also handles any terminal control codes in the appended output."
          (jupyter-with-insertion-bounds
              beg end (jupyter-with-control-code-handling ,@body)
            (put-text-property beg end 'read-only t)
-           (set-buffer-modified-p nil))
-         ))))
+           (set-buffer-modified-p nil))))))
 
 (defmacro jupyter-with-repl-lang-buffer (&rest body)
   "Evaluate BODY in the `jupyter-repl-lang-buffer' of the `current-buffer'.
@@ -337,16 +336,11 @@ MODE has the same meaning as in
 
 ;;; Prompt
 
-; TAG CHANGE
-(defconst jupyter-repl-input-prompt-format ">>  [    ] ")
-;(defconst jupyter-repl-input-prompt-format "In")
+(defconst jupyter-repl-input-prompt-format "In [%d] ")
 ;(defconst jupyter-repl-input-prompt-format "")
-; TAG CHANGE
-(defconst jupyter-repl-output-prompt-format ">>  [    ] ")
-;(defconst jupyter-repl-output-prompt-format "Ou")
+(defconst jupyter-repl-output-prompt-format "Out [%d] ")
 ;(defconst jupyter-repl-output-prompt-format "")
-(defconst jupyter-repl-busy-prompt ">*  [    ] ")
-;(defconst jupyter-repl-busy-prompt "I*")
+(defconst jupyter-repl-busy-prompt "In [*] ")
 
 (defsubst jupyter-repl--prompt-string (ov)
   (nth 0 (overlay-get ov 'jupyter-prompt)))
@@ -405,52 +399,7 @@ interpreted as `in'."
   (setq type (or type 'in))
   (unless (memq type '(in out continuation))
     (error "Prompt type can only be (`in', `out', or `continuation')"))
-  (jupyter-repl-without-continuation-prompts
-   (let ((inhibit-read-only t))
-     ;; The newline that `jupyter-repl--make-prompt' will overlay.
-     (insert (propertize "\n" 'read-only (not (eq type 'continuation))))
-     (cond
-      ((eq type 'in)
-       (let ((count (oref jupyter-current-client execution-count)))
-         (jupyter-repl--make-prompt
-          (format jupyter-repl-input-prompt-format count)
-          'jupyter-repl-input-prompt
-          `(jupyter-cell (beginning ,count))))
-       ;; Prevent prompt overlay from inheriting text properties of code at the
-       ;; beginning of a cell.
-       ;;
-       ;; rear-nonsticky is to prevent code inserted after this character to
-       ;; inherit any of its text properties.
-       ;;
-       ;; front-sticky is to prevent `point' from being trapped between the
-       ;; newline of the prompt overlay and this invisible character.
-       (insert (propertize " "
-                           'read-only t 'invisible t
-                           'rear-nonsticky t 'front-sticky t))
-       ;; The insertion of a new prompt starts a new cell, don't consider the
-       ;; buffer modified anymore.  This is also an indicator for when undo's
-       ;; can be made in the buffer.
-       (set-buffer-modified-p nil)
-       (setq buffer-undo-list '((t . 0))))
-      ((eq type 'out)
-       ;; Output is normally inserted by first going to the end of the output
-       ;; for the request.  The end of the ouput for a request is at the
-       ;; beginning of the next cell after the request which is why we get the
-       ;; cell count of the previous cell
-       (let ((count (jupyter-repl-previous-cell-count)))
-         (jupyter-repl--make-prompt
-          (format jupyter-repl-output-prompt-format count)
-          'jupyter-repl-output-prompt
-          `(jupyter-cell (out ,count))))
-       ;; See the note above about the invisible character for input prompts
-       (insert (propertize " " 'read-only t 'invisible t 'front-sticky t)))
-      ((eq type 'continuation)
-       (jupyter-repl--make-prompt
-        ;; This needs to be two characters wide for some
-        ;; reason, otherwise the continuation prompts will
-        ;; be missing one character.
-        "  " 'jupyter-repl-input-prompt
-        `(read-only nil rear-nonsticky t)))))))
+  )
 
 (defun jupyter-repl-prompt-string ()
   "Return the prompt string of the current input cell."
@@ -856,21 +805,6 @@ lines, truncate it to something less than
          (jupyter-repl-insert-prompt 'in))
         (save-excursion
           (jupyter-repl-backward-cell)
-
-
-(let ((case-fold-search t)) ; or nil
-
-  (goto-char (point-min))
-  ; replace DONE code sent to kernel, dont show
-  (while (search-forward "print('\u001b[42m \u001b[32;1m>> DONE WITH CODE \x1b[0m \u001b[0m',flush=True)"  nil t)
-    (kill-whole-line)
-    )
-  ; replace DONE code sent to kernel, dont show
-  ;(while (search-forward "DONE" nil t)
-    ;(kill-whole-line)
-    ;)
-  ;; repeat for other string pairs
-  )
           (run-hooks 'jupyter-repl-cell-post-send-hook))
         req))))
 
@@ -900,6 +834,7 @@ lines, truncate it to something less than
     (jupyter-repl-append-output client req
       (jupyter-repl-insert-prompt 'out)
       (jupyter-insert data metadata)
+      (insert (propertize "# DONE TAG" 'read-only t))
       )))
 
 (cl-defmethod jupyter-handle-display-data ((client jupyter-repl-client)
@@ -1504,8 +1439,7 @@ value."
                     :code str
                     :store-history jupyter-repl-echo-eval-p))
         (if jupyter-repl-echo-eval-p
-            (jupyter-repl-replace-cell-code cell-previous-code))
-        ))
+            (jupyter-repl-replace-cell-code cell-previous-code))))
     ;; Add callbacks to display evaluation output in pop-up buffers either when
     ;; we aren't copying the input to a REPL cell or, if we are, when the REPL
     ;; buffer isn't visible.
@@ -1515,8 +1449,7 @@ value."
     (prog1 req
       (unless (and jupyter-repl-echo-eval-p
                    (get-buffer-window (oref jupyter-current-client buffer) 'visible))
-        (jupyter-eval-add-callbacks req beg end)
-        ))))
+        (jupyter-eval-add-callbacks req beg end)))))
 
 ;;; Kernel management
 
@@ -1734,7 +1667,6 @@ Return the buffer switched to."
     map))
 
 (put 'jupyter-repl-mode 'mode-class 'special)
-;(jupyter-repl-mode)
 (define-derived-mode jupyter-repl-mode fundamental-mode
   "Jupyter-REPL"
   "A Jupyter REPL major mode."
@@ -1744,9 +1676,7 @@ Return the buffer switched to."
   ;; This is a better setting when rendering HTML tables
   (setq-local truncate-lines t)
   (setq-local indent-line-function #'jupyter-repl-indent-line)
-  ;; TAG CHANGE
-  ;(setq-local left-margin-width jupyter-repl-prompt-margin-width)
-  (setq-local left-margin-width 4)
+  (setq-local left-margin-width jupyter-repl-prompt-margin-width)
   (setq-local yank-handled-properties
               (append '((field . jupyter-repl-yank-handle-field-property))
                       yank-handled-properties))
@@ -1952,11 +1882,10 @@ the `current-buffer' will automatically have
   :init-value nil
   (cond
    (jupyter-repl-interaction-mode
-    ; dont add this
-    ;(add-hook 'completion-at-point-functions 'jupyter-completion-at-point nil t)
+    (add-hook 'completion-at-point-functions 'jupyter-completion-at-point nil t)
     (add-hook 'after-revert-hook 'jupyter-repl-interaction-mode nil t))
    (t
-    ;(remove-hook 'completion-at-point-functions 'jupyter-completion-at-point t)
+    (remove-hook 'completion-at-point-functions 'jupyter-completion-at-point t)
     (remove-hook 'after-revert-hook 'jupyter-repl-interaction-mode t)
     (unless (eq major-mode 'jupyter-repl-mode)
       (kill-local-variable 'jupyter-current-client)))))
@@ -2231,9 +2160,8 @@ interactively, DISPLAY the new REPL buffer as well."
     (jupyter-comm-initialize client file-or-plist)
     (jupyter-start-channels client)
     (jupyter-hb-unpause client)
-    (jupyter-bootstrap-repl client repl-name associate-buffer display)
-    )
-  )
+    (jupyter-bootstrap-repl client repl-name associate-buffer display)))
 
 (provide 'jupyter-repl)
 
+;;; jupyter-repl.el ends here

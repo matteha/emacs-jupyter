@@ -1094,27 +1094,29 @@ buffer corresponding to the evaluated code.
 
 See `jupyter-eval-short-result-max-lines' and
 `jupyter-eval-use-overlays'."
-  (let* ((eval-callbacks (jupyter-eval-result-callbacks req beg end)))
-    (apply
-     #'jupyter-add-callback req
-     (nconc
-      eval-callbacks
-      (list
-       :error
-       (jupyter-message-lambda (traceback)
-         ;; FIXME: Assumes the error in the
-         ;; execute-reply is good enough
-         (when (> (apply #'+ (mapcar #'length traceback)) 250)
-           (jupyter-display-traceback traceback)))
-       :stream
-       (jupyter-message-lambda (name text)
-         (jupyter-with-display-buffer (pcase name
-                                        ("stderr" "error")
-                                        (_ "output"))
-             req
-           (jupyter-insert-ansi-coded-text text)
-           (jupyter-display-current-buffer-guess-where :stream))))))
-    req))
+     (message "sent to kernel"))
+
+  ;; (let* ((eval-callbacks (jupyter-eval-result-callbacks req beg end)))
+  ;;   (apply
+  ;;    #'jupyter-add-callback req
+  ;;    (nconc
+  ;;     eval-callbacks
+  ;;     (list
+  ;;      :error
+  ;;      (jupyter-message-lambda (traceback)
+  ;;        ;; FIXME: Assumes the error in the
+  ;;        ;; execute-reply is good enough
+  ;;        (when (> (apply #'+ (mapcar #'length traceback)) 250)
+  ;;          (jupyter-display-traceback traceback)))
+  ;;      :stream
+  ;;      (jupyter-message-lambda (name text)
+  ;;        (jupyter-with-display-buffer (pcase name
+  ;;                                       ("stderr" "error")
+  ;;                                       (_ "output"))
+  ;;            req
+  ;;          (jupyter-insert-ansi-coded-text text)
+  ;;          (jupyter-display-current-buffer-guess-where :stream))))))
+  ;;   req))
 
 (cl-defgeneric jupyter-eval-string (str &optional beg end)
   "Evaluate STR using the `jupyter-current-client'.
@@ -1130,8 +1132,8 @@ current buffer that STR was extracted from.")
   (let ((jupyter-inhibit-handlers '(not :input-request))
         (req (jupyter-send-execute-request jupyter-current-client
                :code str :store-history nil)))
-    (prog1 req
-      (jupyter-eval-add-callbacks req beg end))
+    ;(prog1 req
+      ;(jupyter-eval-add-callbacks req beg end))
     ))
 
 (defun jupyter-eval-string-command (str)
@@ -1144,10 +1146,7 @@ with `jupyter-eval-short-result-display-function'.
 If `jupyter-eval-use-overlays' is non-nil, evaluation results
 are displayed in the current buffer instead."
   (interactive (list (jupyter-read-expression)))
-
-  (jupyter-eval-string (concat str "\nprint('\u001b[42m \u001b[32;1m>> DONE WITH CODE \x1b[0m \u001b[0m',flush=True)" ))
-  ;(jupyter-eval-string str)
-  )
+  (jupyter-eval-string str))
 
 (defun jupyter-eval-region (beg end)
   "Evaluate a region with the `jupyter-current-client'.
@@ -1212,11 +1211,7 @@ representation of the results in the current buffer."
 (defun jupyter-eval-buffer (buffer)
   "Send the contents of BUFFER using `jupyter-current-client'."
   (interactive (list (current-buffer)))
-  ;(jupyter-eval-string (with-current-buffer buffer (buffer-string))))
-  (jupyter-eval-string (concat (with-current-buffer buffer (buffer-string))
- "\nprint('\u001b[42m \u001b[32;1m>> DONE WITH CODE \x1b[0m \u001b[0m',flush=True)") ))
-  ;(jupyter-eval-string (concat(buffer-substring-no-properties beg end) "\nprint('\u001b[42m \u001b[32;1m>> DONE WITH CODE \x1b[0m \u001b[0m',flush=True)") beg end))
-
+  (jupyter-eval-string (with-current-buffer buffer (buffer-string))))
 
 (defun jupyter-eval-defun ()
   "Evaluate the function at `point'."
@@ -1381,9 +1376,10 @@ SOURCE."
 
 (cl-defmethod jupyter-handle-payload ((payloads vector))
   "Loop over PAYLOADS, calling `jupyter-handle-payload' for each one."
-  (cl-loop
-   for pl across payloads
-   do (jupyter-handle-payload (intern (plist-get pl :source)) pl)))
+  (message "TEST"))
+  ;(cl-loop
+   ;for pl across payloads
+   ;do (jupyter-handle-payload (intern (plist-get pl :source)) pl)))
 
 (cl-defmethod jupyter-handle-payload ((_source (eql page)) pl)
   (let ((text (plist-get (plist-get pl :data) :text/plain))

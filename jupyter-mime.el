@@ -482,15 +482,18 @@ width and height of the image."
                 data type 'data :width width :height height
                 :mask (when needs_background
                         '(heuristic t)))))
-      (insert-image img))))
+      (insert-sliced-image img nil nil 15 15)))
+  )
 
 ;;; Plain text
 
 (defun jupyter-insert-ansi-coded-text (text)
   "Insert TEXT, converting ANSI color codes to font lock faces."
   (jupyter-with-insertion-bounds
+      ;beg end (insert (ansi-color-apply text))
+    ;(jupyter-fixup-font-lock-properties beg end)))
       beg end (insert (ansi-color-apply text))
-    (jupyter-fixup-font-lock-properties beg end)))
+    ))
 
 ;;; `jupyter-insert' method additions
 
