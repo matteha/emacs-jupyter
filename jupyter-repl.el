@@ -862,8 +862,12 @@ lines, truncate it to something less than
 
   (goto-char (point-min))
   ; replace DONE code sent to kernel, dont show
-  (while (search-forward "print('\u001b[42m \u001b[32;1m>> DONE WITH CODE \x1b[0m \u001b[0m',flush=True)"  nil t)
-    (kill-whole-line)
+  ;(while (search-forward "print('\u001b[42m \u001b[32;1m>> DONE WITH CODE \x1b[0m \u001b[0m',flush=True)"  nil t)
+  (while (search-forward "print('\u001b[42m \u001b[32;1m>> DONE WITH CODE \x1b[0m \u001b[0m')"  nil t)
+    ;(kill-whole-line)
+    ; dont kill as that ADDS TO KILL RING!!
+    ; messes with rest of code in eval-region as defined (with eval-buffer)
+    (delete-region (line-beginning-position) (line-end-position))
     )
   ; replace DONE code sent to kernel, dont show
   ;(while (search-forward "DONE" nil t)
